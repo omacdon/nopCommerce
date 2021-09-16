@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +8,7 @@ using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.DataProvider;
 using LinqToDB.DataProvider.SqlServer;
+using Microsoft.Data.SqlClient;
 using Nop.Core;
 using Nop.Core.Infrastructure;
 using Nop.Data.Migrations;
@@ -20,6 +20,12 @@ namespace Nop.Data.DataProviders
     /// </summary>
     public partial class MsSqlNopDataProvider : BaseDataProvider, INopDataProvider
     {
+        #region Fields
+
+        private static readonly Lazy<IDataProvider> _dataProvider = new(() => new SqlServerDataProvider(ProviderName.SqlServer, SqlServerVersion.v2012, SqlServerProvider.MicrosoftDataSqlClient), true);
+
+        #endregion
+
         #region Utils
 
         /// <returns>A task that represents the asynchronous operation</returns>
@@ -40,7 +46,7 @@ namespace Nop.Data.DataProviders
         #endregion
 
         #region Utils
-        
+
         /// <summary>
         /// Gets a connection to the database for a current data provider
         /// </summary>
@@ -49,7 +55,7 @@ namespace Nop.Data.DataProviders
         protected override DbConnection GetInternalDbConnection(string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
-                throw new ArgumentException(nameof(connectionString));
+                throw new ArgumentNullException(nameof(connectionString));
 
             return new SqlConnection(connectionString);
         }
@@ -121,7 +127,7 @@ namespace Nop.Data.DataProviders
             try
             {
                 await using var connection = GetInternalDbConnection(await GetCurrentConnectionStringAsync());
-                
+
                 //just try to connect
                 await connection.OpenAsync();
 
@@ -173,7 +179,7 @@ namespace Nop.Data.DataProviders
         public virtual async Task<int?> GetTableIdentAsync<TEntity>() where TEntity : BaseEntity
         {
             using var currentConnection = await CreateDataConnectionAsync();
-            var tableName = GetEntityDescriptor<TEntity>().TableName;
+            var tableName = GetEntityDescriptor(typeof(TEntity)).EntityName;
 
             var result = currentConnection.Query<decimal?>($"SELECT IDENT_CURRENT('[{tableName}]') as Value")
                 .FirstOrDefault();
@@ -194,7 +200,7 @@ namespace Nop.Data.DataProviders
             if (!currentIdent.HasValue || ident <= currentIdent.Value)
                 return;
 
-            var tableName = GetEntityDescriptor<TEntity>().TableName;
+            var tableName = GetEntityDescriptor(typeof(TEntity)).EntityName;
 
             await currentConnection.ExecuteAsync($"DBCC CHECKIDENT([{tableName}], RESEED, {ident})");
         }
@@ -316,7 +322,7 @@ namespace Nop.Data.DataProviders
         }
 
         /// <summary>
-        /// Updates records in table, using values from entity parameter. 
+        /// Updates records in table, using values from entity parameter.
         /// Records to update are identified by match on primary key value from obj value.
         /// </summary>
         /// <param name="entities">Entities with data to update</param>
@@ -340,7 +346,7 @@ namespace Nop.Data.DataProviders
         /// <summary>
         /// Sql server data provider
         /// </summary>
-        protected override IDataProvider LinqToDbDataProvider => SqlServerTools.GetDataProvider(SqlServerVersion.v2008, SqlServerProvider.SystemDataSqlClient);
+        protected override IDataProvider LinqToDbDataProvider => _dataProvider.Value;
 
         /// <summary>
         /// Gets allowed a limit input value of the data for hashing functions, returns 0 if not limited

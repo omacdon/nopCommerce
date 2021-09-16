@@ -859,6 +859,7 @@ namespace Nop.Web.Factories
                     "/country/getstatesbycountryid",
                     "/install",
                     "/setproductreviewhelpfulness",
+                    "/*?*returnUrl="
                 };
                 var localizableDisallowPaths = new List<string>
                 {
@@ -930,25 +931,14 @@ namespace Nop.Web.Factories
                 const string newLine = "\r\n"; //Environment.NewLine
                 sb.Append("User-agent: *");
                 sb.Append(newLine);
+
                 //sitemaps
                 if (_sitemapXmlSettings.SitemapXmlEnabled)
                 {
-                    if (_localizationSettings.SeoFriendlyUrlsForLanguagesEnabled)
-                    {
-                        //URLs are localizable. Append SEO code
-                        foreach (var language in await _languageService.GetAllLanguagesAsync(storeId: (await _storeContext.GetCurrentStoreAsync()).Id))
-                        {
-                            sb.AppendFormat("Sitemap: {0}{1}/sitemap.xml", _webHelper.GetStoreLocation(), language.UniqueSeoCode);
-                            sb.Append(newLine);
-                        }
-                    }
-                    else
-                    {
-                        //localizable paths (without SEO code)
-                        sb.AppendFormat("Sitemap: {0}sitemap.xml", _webHelper.GetStoreLocation());
-                        sb.Append(newLine);
-                    }
+                    sb.AppendFormat("Sitemap: {0}sitemap.xml", _webHelper.GetStoreLocation());
+                    sb.Append(newLine);
                 }
+
                 //host
                 sb.AppendFormat("Host: {0}", _webHelper.GetStoreLocation());
                 sb.Append(newLine);

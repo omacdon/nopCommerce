@@ -43,7 +43,6 @@ namespace Nop.Services.Media
         #region Ctor
 
         public AzurePictureService(AppSettings appSettings,
-            INopDataProvider dataProvider,
             IDownloadService downloadService,
             IHttpContextAccessor httpContextAccessor,
             INopFileProvider fileProvider,
@@ -56,8 +55,7 @@ namespace Nop.Services.Media
             IUrlRecordService urlRecordService,
             IWebHelper webHelper,
             MediaSettings mediaSettings)
-            : base(dataProvider,
-                  downloadService,
+            : base(downloadService,
                   httpContextAccessor,
                   fileProvider,
                   productAttributeParser,
@@ -231,7 +229,9 @@ namespace Nop.Services.Media
             }
 
             if (headers is null)
-                await blobClient.UploadAsync(ms);
+                //We must explicitly indicate through the parameter that the object needs to be overwritten if it already exists
+                //See more: https://github.com/Azure/azure-sdk-for-net/issues/9470
+                await blobClient.UploadAsync(ms, overwrite: true);
             else
                 await blobClient.UploadAsync(ms, new BlobUploadOptions { HttpHeaders = headers });
 
